@@ -14,30 +14,29 @@ const std = @import("std");
 /// - `tensorShape` defines the shape (dimensions) of the tensor.
 pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
     comptime {
-
         return struct {
             /// Self is a reference to the current type instance of the tensor.
             const Self = @This();
 
             /// `data` is a flat array storing the tensor's elements.
-            data: [Self.len()]T,
+            data: [Self._len()]T,
 
             /// Initializes the tensor with a default value of `0` for each element.
             /// Returns a new tensor instance with all values set to zero.
             pub fn default() Self {
                 return Self{
-                    .data = [_]T{0} ** Self.len(),
+                    .data = [_]T{0} ** Self._len(),
                 };
             }
 
             /// Retrieves the tensor element at the given multi-dimensional `index`.
-            /// 
+            ///
             /// - `index`: an array representing the position within each dimension.
             /// - Returns the element of type `T` at the specified index.
-            inline fn get(this: Self, index: anytype) T {
+            pub inline fn get(this: Self, index: anytype) T {
                 comptime var offset = 0;
                 comptime {
-                    for (0..Self.dim()) |i| {
+                    for (0..Self._dim()) |i| {
                         offset = offset * tensorShape[i] + index[i];
                     }
                 }
@@ -45,9 +44,32 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
                 return this.data[offset];
             }
 
+            /// Sets the tensor element at the given multi-dimensional `index`.
+            ///
+            /// - `index`: an array representing the position within each dimension.
+            /// - `value`: the element of type `T` to set at the specified index.
+            pub inline fn set(this: *Self, index: anytype, value: T) void {
+                comptime var offset = 0;
+                comptime {
+                    for (0..Self._len()) |i| {
+                        offset = offset * tensorShape[i] + index[i];
+                    }
+                }
+
+                this.data[offset] = value;
+            }
+
             /// Returns the total number of elements in the tensor.
             /// Computed as the product of each dimension size in `tensorShape`.
-            inline fn len() usize {
+            pub inline fn len(comptime _: Self) usize {
+                comptime {
+                    return Self._len();
+                }
+            }
+
+            /// Helper
+            /// TODO(NIELS): can be better?
+            pub inline fn _len() usize {
                 comptime {
                     var tensorLen = 1;
                     for (tensorShape) |s| {
@@ -59,7 +81,15 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
 
             /// Returns the number of dimensions of the tensor.
             /// Equivalent to the length of `tensorShape`.
-            inline fn dim() usize {
+            pub inline fn dim(comptime _: Self) usize {
+                comptime {
+                    return Self._dim();
+                }
+            }
+
+            /// Helper
+            /// TODO(NIELS): can be better?
+            pub inline fn _dim() usize {
                 comptime {
                     return tensorShape.len;
                 }
@@ -67,7 +97,15 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
 
             /// Returns the shape of the tensor, which is an array defining
             /// the size of each dimension.
-            inline fn shape() @TypeOf(tensorShape) {
+            pub inline fn shape(comptime _: Self) @TypeOf(tensorShape) {
+                comptime {
+                    return Self._shape();
+                }
+            }
+
+            /// Helper
+            /// TODO(NIELS): can be better?
+            pub inline fn _shape(comptime _: Self) @TypeOf(tensorShape) {
                 comptime {
                     return tensorShape;
                 }
@@ -75,4 +113,3 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
         };
     }
 }
-

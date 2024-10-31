@@ -4,4 +4,3 @@ pub const TensorType = enum {
     Fixed,
     Computed,
 };
-
