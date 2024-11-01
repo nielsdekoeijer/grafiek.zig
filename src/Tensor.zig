@@ -29,6 +29,22 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
                 };
             }
 
+            /// Initializes the tensor with a specified values.
+            /// Returns a new tensor instance with these values stored.
+            pub fn init(values: anytype) Self {
+                var data: [Self._len()]T = undefined;
+                comptime {
+                    @setEvalBranchQuota(10 * Self._len());
+                    for(0..Self._len()) |i| {
+                        data[i] = values[i];
+                    }
+                }
+
+                return Self {
+                    .data = data,
+                };
+            }
+
             /// Retrieves the tensor element at the given multi-dimensional `index`.
             ///
             /// - `index`: an array representing the position within each dimension.
