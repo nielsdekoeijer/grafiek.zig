@@ -1,1 +1,1 @@
-pub const OperatorType = enum { Add, Identity };
+pub const OperatorType = enum { Add, Identity, Transpose };

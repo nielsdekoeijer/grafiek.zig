@@ -35,12 +35,12 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
                 var data: [Self._len()]T = undefined;
                 comptime {
                     @setEvalBranchQuota(10 * Self._len());
-                    for(0..Self._len()) |i| {
+                    for (0..Self._len()) |i| {
                         data[i] = values[i];
                     }
                 }
 
-                return Self {
+                return Self{
                     .data = data,
                 };
             }
@@ -67,7 +67,7 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
             pub inline fn set(this: *Self, index: anytype, value: T) void {
                 comptime var offset = 0;
                 comptime {
-                    for (0..Self._len()) |i| {
+                    for (0..Self._dim()) |i| {
                         offset = offset * tensorShape[i] + index[i];
                     }
                 }
@@ -121,7 +121,7 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
 
             /// Helper
             /// TODO(NIELS): can be better?
-            pub inline fn _shape(comptime _: Self) @TypeOf(tensorShape) {
+            pub inline fn _shape() @TypeOf(tensorShape) {
                 comptime {
                     return tensorShape;
                 }

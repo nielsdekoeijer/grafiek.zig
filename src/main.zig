@@ -21,9 +21,9 @@ pub fn Transpose(comptime Self: type, comptime inp: anytype, comptime out: anyty
     comptime {
         return struct {
             pub fn process(self: *Self) void {
-                _ = perm;
-                for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
-                    @field(self.inner.tensors, out).data[i] = @field(self.inner.tensors, inp).data[i];
+                inline for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
+                    const j = utils.comptimeShapeForeach(@TypeOf(@field(self.inner.tensors, out))._shape(), i);
+                    @field(self.inner.tensors, out).set(utils.comptimeIndexPermute(j, perm), @field(self.inner.tensors, inp).get(j));
                 }
             }
         };
@@ -34,7 +34,7 @@ pub fn Add(comptime Self: type, comptime inp_a: anytype, comptime inp_b: anytype
     comptime {
         return struct {
             pub fn process(self: *Self) void {
-                for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
+                inline for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
                     @field(self.inner.tensors, out).data[i] = @field(self.inner.tensors, inp_a).data[i] + @field(self.inner.tensors, inp_b).data[i];
                 }
             }
@@ -46,7 +46,7 @@ pub fn Tanh(comptime Self: type, comptime inp: anytype, comptime out: anytype) t
     comptime {
         return struct {
             pub fn process(self: *Self) void {
-                for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
+                inline for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
                     @field(self.inner.tensors, out).data[i] = std.math.tanh(@field(self.inner.tensors, inp).data[i]);
                 }
             }
@@ -58,7 +58,7 @@ pub fn Mul(comptime Self: type, comptime inp_a: anytype, comptime inp_b: anytype
     comptime {
         return struct {
             pub fn process(self: *Self) void {
-                for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
+                inline for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
                     @field(self.inner.tensors, out).data[i] = @field(self.inner.tensors, inp_a).data[i] * @field(self.inner.tensors, inp_b).data[i];
                 }
             }
@@ -70,7 +70,7 @@ pub fn Identity(comptime Self: type, comptime inp: anytype, comptime out: anytyp
     comptime {
         return struct {
             pub fn process(self: *Self) void {
-                for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
+                inline for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
                     @field(self.inner.tensors, out).data[i] = @field(self.inner.tensors, inp).data[i];
                 }
             }
@@ -82,7 +82,7 @@ pub fn Reshape(comptime Self: type, comptime inp: anytype, comptime out: anytype
     comptime {
         return struct {
             pub fn process(self: *Self) void {
-                for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
+                inline for (0..@TypeOf(@field(self.inner.tensors, out))._len()) |i| {
                     @field(self.inner.tensors, out).data[i] = @field(self.inner.tensors, inp).data[i];
                 }
             }
@@ -115,7 +115,6 @@ pub fn Make(comptime M: anytype) type {
                                 .alignment = 0,
                             };
                         }
-
                     }
 
                     tensorType = @Type(.{
@@ -162,10 +161,18 @@ pub fn Make(comptime M: anytype) type {
                                     M.operators[idx].params.out_0,
                                 );
                             },
+                            OperatorType.Transpose => blk: {
+                                break :blk Transpose (
+                                    @This(),
+                                    M.operators[idx].params.inp_0,
+                                    M.operators[idx].params.out_0,
+                                    M.operators[idx].params.perm,
+                                );
+                            },
                         };
 
                         fields[idx] = std.builtin.Type.StructField{
-                            .name = M.operators[idx].name,
+                            .name = std.fmt.comptimePrint("{}", .{idx}),
                             .type = Op,
                             .default_value = &Op{},
                             .is_comptime = false,
@@ -178,7 +185,7 @@ pub fn Make(comptime M: anytype) type {
                             .layout = .auto,
                             .fields = fields[0..],
                             .decls = &[_]std.builtin.Type.Declaration{},
-                            .is_tuple = false,
+                            .is_tuple = true,
                         },
                     });
                 }
@@ -215,46 +222,28 @@ pub fn Make(comptime M: anytype) type {
             };
 
             inner: InnerType,
+
+            pub fn process(self: *@This()) void {
+                inline for (self.inner.operators) |op| {
+                    @TypeOf(op).process(self);
+                }
+            }
         };
     }
 }
 
 pub fn main() !void {
-    const Model = @import("giga.zig").model;
-    var model = Make(Model) {
-        .inner = Make(Model).InnerType {},
+    const Model = @import("simple.zig").model;
+    var model = Make(Model){
+        .inner = Make(Model).InnerType{},
     };
 
-     var prng = std.Random.DefaultPrng.init(blk: {
-        var seed: u64 = undefined;
-        try std.posix.getrandom(std.mem.asBytes(&seed));
-        break :blk seed;
-    });
-    const rand = prng.random();
+    model.inner.tensors.Input.data[0] = 1.0;
+    model.process();
 
-    for (0..model.inner.tensors.input_tensor_1.data.len) |i| {
-        model.inner.tensors.input_tensor_1.data[i] = rand.float(f32);
-    }
-
-    for (0..model.inner.tensors.input_tensor_2.data.len) |i| {
-        model.inner.tensors.input_tensor_2.data[i] = rand.float(f32);
-    }
-
-    for (0..model.inner.tensors.output_tensor.data.len) |i| {
-        model.inner.tensors.output_tensor.data[i] = rand.float(f32);
-    }
-
-    const start = std.time.nanoTimestamp();
-    for (0..100) |_| {
-        @TypeOf(model.inner.operators.GigaBigAdd).process(&model);
-    }
-    const end = std.time.nanoTimestamp();
-    const duration = end - start;
-    std.debug.print("Duration: {} nanoseconds\n", .{duration});
-
-    var out: f32 = 0.0;
-    for (0..model.inner.tensors.output_tensor.data.len) |i| {
-        out += model.inner.tensors.output_tensor.data[i];
-    }
-    std.debug.print("{any}\n", .{out});
+    std.debug.print("{}\n", .{model.inner.tensors.Input});
+    std.debug.print("{}\n", .{model.inner.tensors.Constant});
+    std.debug.print("{}\n", .{model.inner.tensors.Result0});
+    std.debug.print("{}\n", .{model.inner.tensors.Result1});
+    std.debug.print("{}\n", .{model.inner.tensors.Output});
 }
