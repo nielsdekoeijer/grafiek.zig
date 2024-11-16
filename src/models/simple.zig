@@ -1,5 +1,5 @@
-const OperatorType = @import("OperatorType.zig").OperatorType;
-const TensorType = @import("TensorType.zig").TensorType;
+const OperatorType = @import("../operator/OperatorType.zig").OperatorType;
+const TensorType = @import("../tensor/TensorType.zig").TensorType;
 pub const model = .{
     .tensors = .{
         .{

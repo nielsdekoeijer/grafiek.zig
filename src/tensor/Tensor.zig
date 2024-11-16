@@ -50,10 +50,19 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
             /// - `index`: an array representing the position within each dimension.
             /// - Returns the element of type `T` at the specified index.
             pub inline fn get(this: Self, index: anytype) T {
+                return getReshaped(this, index, tensorShape);
+            }
+
+            /// Retrieves the tensor element at the given multi-dimensional `index`.
+            ///
+            /// - `index`: an array representing the position within each dimension.
+            /// - `reshapeShape`: the shape to assume for the underlying data
+            /// - Returns the element of type `T` at the specified index.
+            pub inline fn getReshaped(this: anytype, index: anytype, comptime reshapeShape: anytype) T {
                 comptime var offset = 0;
                 comptime {
-                    for (0..Self._dim()) |i| {
-                        offset = offset * tensorShape[i] + index[i];
+                    for (0..reshapeShape.len) |i| {
+                        offset = offset * reshapeShape[i] + index[i];
                     }
                 }
 
@@ -65,10 +74,19 @@ pub fn Tensor(comptime T: type, comptime tensorShape: anytype) type {
             /// - `index`: an array representing the position within each dimension.
             /// - `value`: the element of type `T` to set at the specified index.
             pub inline fn set(this: *Self, index: anytype, value: T) void {
+                setReshaped(this, index, value, tensorShape);
+            }
+
+            /// Sets the tensor element at the given multi-dimensional `index`.
+            ///
+            /// - `index`: an array representing the position within each dimension.
+            /// - `value`: the element of type `T` to set at the specified index.
+            /// - `reshapeShape`: the shape to assume for the underlying data
+            pub inline fn setReshaped(this: anytype, index: anytype, value: T, comptime reshapeShape: anytype) void {
                 comptime var offset = 0;
                 comptime {
-                    for (0..Self._dim()) |i| {
-                        offset = offset * tensorShape[i] + index[i];
+                    for (0..reshapeShape.len) |i| {
+                        offset = offset * reshapeShape[i] + index[i];
                     }
                 }
 

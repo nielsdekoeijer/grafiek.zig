@@ -61,7 +61,7 @@ pub inline fn comptimeIndexPermute(comptime indices: anytype, comptime perm: any
 }
 
 // generates a list that, in order, iterates over an entire shape
-inline fn ComptimeShapeForeachType(comptime shape: anytype, comptime index: comptime_int) type{
+inline fn ComptimeIndexAsShapeType(comptime shape: anytype, comptime index: comptime_int) type {
     comptime {
         var fields: [shape.len]std.builtin.Type.StructField = undefined;
         var remainingIndex = index;
@@ -96,8 +96,8 @@ inline fn ComptimeShapeForeachType(comptime shape: anytype, comptime index: comp
     }
 }
 
-pub inline fn comptimeShapeForeach(comptime shape: anytype, comptime index: usize) ComptimeShapeForeachType(shape, index) {
+pub inline fn comptimeIndexAsShape(comptime shape: anytype, comptime index: usize) ComptimeIndexAsShapeType(shape, index) {
     comptime {
-        return ComptimeShapeForeachType(shape, index) {};
+        return ComptimeIndexAsShapeType(shape, index){};
     }
 }
